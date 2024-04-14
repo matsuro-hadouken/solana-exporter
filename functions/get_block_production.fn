@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#!/bin/bash
-
 # This function retrieves and calculates detailed block production statistics for a specific validator from a Solana node.
 # It uses the 'getBlockProduction' RPC call to fetch the number of slots that have been assigned and processed by the validator,
 # which is essential for monitoring the validator's performance and participation in the consensus process.
@@ -34,11 +32,10 @@
 
 # Additionally, robust JSON validation checks ensure the response is accurate, and any errors are logged appropriately.
 
-# Function to extract assigned and processed leader slots and calculate skips
 function get_block_production {
 
-    local rpc_endpoint="$1"
-    local validator_identity="$2"
+    local rpc_endpoint="${1}"
+    local validator_identity="${2}"
 
     # Make the RPC call
     response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d "{
@@ -50,23 +47,32 @@ function get_block_production {
         }]
     }")
 
-    # Validate JSON response
-    json_validator "$response"
-
-    # Extract assigned and processed leader slots
-    assigned_leader_slots=$(echo "$response" | jq -r ".result.value.byIdentity.\"$validator_identity\"[0]")
-    processed_leader_slots=$(echo "$response" | jq -r ".result.value.byIdentity.\"$validator_identity\"[1]")
+    # Extract assigned and processed leader slots; default to 0 if not present
+    assigned_leader_slots=$(echo "$response" | jq -r ".result.value.byIdentity.\"$validator_identity\"[0] // 0")
+    processed_leader_slots=$(echo "$response" | jq -r ".result.value.byIdentity.\"$validator_identity\"[1] // 0")
 
     # Calculate skipped leader slots
     skipped_leader_slots=$((assigned_leader_slots - processed_leader_slots))
 
-    # Calculate leader slots skip percentage
-    leader_slots_skip_percentage=$(echo "scale=2; 100 * $skipped_leader_slots / $assigned_leader_slots" | bc)
+    # Calculate leader slots skip percentage only if assigned slots is not zero
+    if [ "$assigned_leader_slots" -eq 0 ]; then
+        leader_slots_skip_percentage=0
+        slots_assignment_status=0  # No slots are assigned
+
+        log_message "WARN: No slots for you yet! Modify source code to get in "to top 100", set commission to 0" "$log_file_path"
+
+    else
+
+        leader_slots_skip_percentage=$(echo "scale=2; 100 * $skipped_leader_slots / $assigned_leader_slots" | bc)
+        slots_assignment_status=1  # Slots are assigned
+
+    fi
 
     # Output in key=value format for compatibility with Prometheus file creation
     echo "block_production_assigned_slots=$assigned_leader_slots"
     echo "block_production_processed_slots=$processed_leader_slots"
     echo "block_production_skipped_slots=$skipped_leader_slots"
     echo "block_production_skip_rate_percentage=$leader_slots_skip_percentage"
+    echo "block_production_no_slots_yet=$slots_assignment_status"  # Poor validator indicator: 0 no slots yet, 1 if assigned
 
 }
