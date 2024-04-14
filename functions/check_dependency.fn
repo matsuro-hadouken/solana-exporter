@@ -1,21 +1,26 @@
 #!/bin/bash
 
-function check_dependency() {
-
-    # Ensure the log file exists; if not, create it
-    if [ ! -f "$log_file_path" ]; then
-        touch "$log_file_path" 2>/dev/null
-        if [ $? -ne 0 ]; then
-            echo "Error: Unable to write to log file path at '$log_file_path'. Check permissions." >&2
-            exit 1
-        fi
+# Function to initialize Prometheus metrics file
+function initialize_prometheus_file {
+    local prom_file="${rpc_responses_prom_file}"
+    if [ ! -f "$prom_file" ]; then
+        touch "$prom_file"
+        echo "# HELP function_status RPC functions execution statuses (0=success, 1=empty response, 3=error)" > "$prom_file"
+        echo "# TYPE function_status gauge" >> "$prom_file"
     fi
 
-    # Ensure the log file exists; if not, create it
-    if [ ! -f "$rpc_responses_prom_file" ]; then
-        touch "$rpc_responses_prom_file" 2>/dev/null
+    if [ "$log_level" = "debug" ]; then
+        log_message "DEBUG: '${rpc_responses_prom_file}' initialized ..." "$log_file_path"
+    fi
+}
+
+# Function to check and ensure all necessary dependencies are set up
+function check_dependency() {
+    # Ensure the temporary files directory exists
+    if [ ! -d "$temp_files" ]; then
+        mkdir -p "$temp_files"
         if [ $? -ne 0 ]; then
-            echo "Error: Unable to write to log file path at '$rpc_responses_prom_file'. Check permissions." >&2
+            echo "Error: Unable to create temporary directory at '$temp_files'. Check permissions." >&2
             exit 1
         fi
     fi
@@ -29,13 +34,15 @@ function check_dependency() {
         fi
     fi
 
-    # Ensure the temporary files directory exists
-    if [ ! -d "$temp_files" ]; then
-        mkdir -p "$temp_files"
+    # Ensure the log file exists; if not, create it
+    if [ ! -f "$log_file_path" ]; then
+        touch "$log_file_path" 2>/dev/null
         if [ $? -ne 0 ]; then
-            echo "Error: Unable to create temporary directory at '$temp_files'. Check permissions." >&2
+            echo "Error: Unable to write to log file path at '$log_file_path'. Check permissions." >&2
             exit 1
         fi
     fi
+
+    initialize_prometheus_file
 
 }

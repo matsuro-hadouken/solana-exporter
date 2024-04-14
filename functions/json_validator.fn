@@ -11,6 +11,7 @@
 # The script also logs all actions, including errors and debug information, to a designated log file to facilitate troubleshooting.
 
 function json_validator {
+
     local response="${1}"
     local function_name="${FUNCNAME[1]}"  # Caller function name
     local status_code

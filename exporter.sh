@@ -1,38 +1,18 @@
 #!/bin/bash
 
-# Configuration Variables
+# git clone https://github.com/matsuro-hadouken/solana-exporter.git /opt/solana-exporter
 
-# RPC endpoint: Specify the URL of the node to be monitored.
-RPC='127.0.0.1:8899'
+# chmod -R <node-exporter-user>:<node-exporter-user> /opt/solana-exporter
 
-# VOTE_ACCOUNT: Address of the voting account.
-VOTE_ACCOUNT='TJxK9eH3Wq628YtwCgavBMP47VoZ8yx1r2U4fxYgMhqp'
+# run this script by cron, adjust timeout
+# edit <node_exporter_user> cron tasker:
+# sudo -u node_exporter_user crontab -e
+# Add job: ( run every 1 minute in this example )
+# * * * * * /usr/bin/timeout 60 /bin/bash -c 'cd /opt/solana-exporter && ./exporter.sh'
+# Save and exit
 
-# VALIDATOR_IDENTITY: Address of the validator.
-VALIDATOR_IDENTITY='MxL3TbQ6Jk035NsaRpeoZHK21RmF9yt4e7V8ljVcPzsd'
-
-# exporter_home_path: Directory path for storing all exporter files and subfolders.
-# Ensure that this directory is owned by the user managing the node-exporter process
-# and that it has the necessary permissions for recursive access.
-exporter_home_path="/opt/solana-exporter"
-
-# metrics_prefix: Prefix for metrics, used in Prometheus and Grafana for identifying metrics.
-# It's formatted as 'solana_<metric_name>'.
-# Do not modify this if you are using the provided Grafana json dashboard, otherwise make your own.
-metrics_prefix='solana'
-
-# log_level: Controls the verbosity of log output.
-# Set to "debug" for detailed logs "or anything also" for standard logging.
-log_level="info"
-
-# execution_timeout: Maximum allowable time in seconds for the script to complete.
-# If the script does not finish within this time, it will terminate all operations.
-# This setting should be less than the interval set in the cron job.
-# For example, if the cron job timeout is 60 seconds, consider setting this to 30 seconds
-# to ensure proper script execution.
-execution_timeout=46 # 46 should be good for once per minute cron
-
-# End of configuration <===========================================================================
+# Source manual configuration file
+source ./credentials.conf
 
 # Lock file configuration
 lock_file="${exporter_home_path}/exporter.lock"
@@ -161,7 +141,8 @@ create_multiple_prom_files "${version_array[@]}"
 validator_identity_balance=$(getBalance "$VALIDATOR_IDENTITY" "$RPC")
 create_prom_file "validator_identity_account_balance" "Identity account balance $VALIDATOR_IDENTITY" "gauge" "$validator_identity_balance"
 
-# Metrics collection done, we expect all RPC calls to complete here <====================================================================
+# Metrics collection 'completed' <==================
+# Expect all RPC calls to be processed at this point
 
 # End timing and calculate duration in nanoseconds for all RPC calls in total
 end_time=$(date +%s%N)
