@@ -1,0 +1,56 @@
+#!/bin/bash
+
+#!/bin/bash
+
+# This function queries a Solana node to retrieve the highest snapshot slots available.
+# Snapshots are used in Solana for fast synchronization of validators by providing a record of the state of the ledger at a given slot.
+# The function fetches both the highest full snapshot slot and the highest incremental snapshot slot.
+
+# Arguments:
+#   $1 - RPC endpoint URL: The server address to send the request to. This should be the JSON RPC endpoint of a Solana node.
+
+# Response:
+# The function extracts and outputs the highest full snapshot slot and the highest incremental snapshot slot.
+# These slots are critical for understanding the most recent points at which the network state has been fully and incrementally saved,
+# which can aid in recovery and synchronization processes.
+
+# Usage:
+# This function is crucial for administrators and operators of Solana nodes who need to manage or automate the process of node synchronization and backups.
+# Example usage:
+#   snapshot_slots=$(get_highest_snapshot_slot "https://api.mainnet-beta.solana.com")
+#   echo $snapshot_slots
+
+# Solana RPC Reference:
+# Detailed information about the 'getHighestSnapshotSlot' RPC call can be found in the Solana documentation:
+# https://solana.com/docs/rpc/http/gethighestsnapshotslot
+
+# Output:
+# The function provides the snapshot slot numbers in a key=value format, making it easy to integrate and parse within scripts or monitoring tools:
+# - full_snapshot_slot: The slot number of the latest complete snapshot.
+# - incremental_snapshot_slot: The slot number of the latest incremental snapshot.
+# These outputs are logged using 'json_validator', which also ensures the JSON response is valid and logs any issues encountered during the fetch.
+
+# Function to get the highest snapshot slots, standardized output
+function get_highest_snapshot_slot {
+
+    local rpc_endpoint="$1"
+
+    # Make the RPC call
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d '{
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getHighestSnapshotSlot"
+    }')
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Extract full and incremental slot values
+    full_slot=$(echo "$response" | jq -r '.result.full')
+    incremental_slot=$(echo "$response" | jq -r '.result.incremental')
+
+    # Output in key=value format
+    echo "full_snapshot_slot=$full_slot"
+    echo "incremental_snapshot_slot=$incremental_slot"
+
+}

@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# This function queries a Solana node to retrieve the current version of the Solana core software and its associated feature set.
+# Understanding the software version and features is critical for ensuring compatibility and taking advantage of the latest functionalities
+# and security updates provided by the Solana network.
+
+# Arguments:
+#   $1 - RPC endpoint URL: The server address to send the request to. This should be the JSON RPC endpoint of a Solana node.
+
+# Response:
+# The function outputs the Solana core software version and the active feature set. This information helps developers and network administrators
+# to verify that their nodes are running the expected version and to diagnose issues related to version discrepancies.
+
+# Usage:
+# This function is essential for monitoring and management tools that need to ensure nodes are up-to-date and operating with the correct software features.
+# Example usage:
+#   version_info=$(getVersion "https://api.mainnet-beta.solana.com")
+#   echo $version_info
+
+# Solana RPC Reference:
+# Detailed information about the 'getVersion' RPC call can be found in the Solana documentation:
+# https://solana.com/docs/rpc/http/getversion
+
+# Output:
+# The function returns the Solana core version and feature set in a key=value format, making it easy to integrate and parse within scripts or monitoring tools:
+# - solana_core_version: Indicates the version of the Solana core software running on the node.
+# - feature_set: Identifies the set of enabled features on the node, which can affect behavior and compatibility.
+# Validation of the response's JSON format is handled by 'json_validator', which also logs any errors encountered during the process to ensure data integrity.
+
+function getVersion {
+
+    local rpc_endpoint="$1"
+
+    # Make the RPC call
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d '{
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getVersion"
+    }')
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Extract the Solana core version and feature set
+    local solana_core=$(echo "$response" | jq -r '.result["solana-core"]')
+    local feature_set=$(echo "$response" | jq -r '.result["feature-set"]')
+
+    # Convert version from format like "1.18.11" to "11811"
+    local numeric_version=$(echo "$solana_core" | tr -d '.')
+
+    # Output the transformed version and feature set in key=value format
+    echo "core_version=$numeric_version"
+    echo "feature_set=$feature_set"
+
+}

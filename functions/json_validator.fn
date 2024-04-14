@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# json_validator.fn
+# This script provides functions to validate the JSON response from RPC calls.
+# It performs checks to ensure responses are not empty and are in valid JSON formats.
+# Upon validation, it updates a Prometheus metrics file ${rpc_responses_prom_file} with the status of each function's execution:
+# - 0 indicates a successful validation (response is valid JSON and not empty).
+# - 1 indicates an empty response.
+# - 3 indicates an invalid JSON format.
+# These statuses are recorded in a Prometheus-compatible format to monitor the health and success of RPC responses.
+# The script also logs all actions, including errors and debug information, to a designated log file to facilitate troubleshooting.
+
+function json_validator {
+
+    local response="${1}"
+    local function_name="${FUNCNAME[1]}"  # Caller function name
+
+    local status_code
+
+    if [ -z "$response" ]; then
+	# response is empty
+        echo "$(date "+%Y-%m-%d %H:%M:%S") ERROR: Empty response in $function_name" >> "$log_file_path"
+        status_code=1
+    elif ! echo "$response" | jq . >/dev/null 2>&1; then
+	# broken json ( not sure if this can happen, but just in case )
+        echo "$(date "+%Y-%m-%d %H:%M:%S") ERROR: Invalid JSON format in response at $function_name" >> "$log_file_path"
+        status_code=3
+    else
+	# If we get here, json is valid. Debug echo can be commented out
+        # echo "$(date "+%Y-%m-%d %H:%M:%S") DEBUG: RPC response successfully validated at $function_name" >> "$log_file_path"
+        status_code=0
+    fi
+
+    # Update the Prometheus metrics file with the status code
+    update_prometheus_status "$function_name" "$status_code"
+}
+
+# Maintain ${rpc_responses_prom_file}
+function update_prometheus_status {
+
+    local function_name="${1}"
+    local status="${2}"
+    local prom_file="${rpc_responses_prom_file}"
+    local temp_file="${prom_file}.tmp"
+
+    # Ensure HELP and TYPE definitions are set in the temp file
+    if ! grep -q "^# HELP function_status" "$prom_file"; then
+        echo "# HELP function_status RPC functions execution statuses (0=success, 1=empty response, 3=error)" > "$temp_file"
+        echo "# TYPE function_status gauge" >> "$temp_file"
+    else
+        grep "^# " "$prom_file" > "$temp_file"
+    fi
+
+    # Update metric, avoid adding HELP and TYPE again
+    awk -v fname="$function_name" -v stat="$status" '
+        BEGIN { found=0 }
+        /^function_status{function="'"fname"'"} / {
+            print "function_status{function=\"" fname "\"} " stat;
+            found=1;
+            next;
+        }
+        /^# / { next }
+        { print }
+        END { if (!found) print "function_status{function=\"" fname "\"} " stat; }
+    ' "$prom_file" >> "$temp_file"
+
+    # Atomically move the temporary file to the original
+    if ! mv "$temp_file" "$prom_file"; then
+        echo "$(date "+%Y-%m-%d %H:%M:%S") ERROR: Failed to update Prometheus metrics file" >> "$log_file_path"
+        [ -f "$temp_file" ] && rm "$temp_file"  # Clean up temporary file on failure
+    fi
+
+}

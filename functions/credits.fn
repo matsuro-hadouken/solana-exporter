@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# This function retrieves detailed account information for a specified Solana vote account using the Solana JSON RPC API.
+# The function uses the 'getAccountInfo' RPC call to fetch data such as current and previous epoch credits, commission rates,
+# and account balances in lamports and SOL (converted from lamports).
+
+# Arguments:
+#   $1 - RPC endpoint URL, the server address to send the request to.
+#   $2 - Vote account public key, identifies the vote account for which information is being requested.
+
+# Response:
+# The function parses the JSON response to extract relevant account details including:
+# - Current epoch number
+# - Credits earned in the current and previous epochs
+# - Commission percentage charged by the validator
+# - Account balance in lamports and its equivalent in SOL
+
+# Usage:
+# The function outputs structured data as key-value pairs, making it suitable for further processing or logging.
+# Example usage in a script:
+#   account_info=$(get_account_info "https://api.testnet.solana.com" "VoteAccountPubkey")
+#   echo $account_info
+
+# Solana RPC Reference:
+# The 'getAccountInfo' method and its parameters are documented in the Solana JSON RPC API documentation:
+# https://solana.com/docs/rpc/http/getaccountinfo
+
+function get_account_info {
+
+    local rpc_endpoint="$1"
+    local vote_account="$2"
+
+    # Request
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d "{
+        \"jsonrpc\": \"2.0\",
+        \"id\": 1,
+        \"method\": \"getAccountInfo\",
+        \"params\": [\"$vote_account\", {\"encoding\": \"jsonParsed\"}]
+    }")
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Extract values
+    current_epoch=$(echo "$response" | jq -r '.result.value.data.parsed.info.epochCredits[-1].epoch')
+    current_epoch_credits=$(echo "$response" | jq -r '.result.value.data.parsed.info.epochCredits[-1].credits')
+    previous_epoch_credits=$(echo "$response" | jq -r '.result.value.data.parsed.info.epochCredits[-1].previousCredits')
+    commission=$(echo "$response" | jq -r '.result.value.data.parsed.info.commission')
+    lamports=$(echo "$response" | jq -r '.result.value.lamports')
+    sol=$(echo "scale=9; $lamports / 1000000000" | bc)
+
+    # Return a structured format with more descriptive keys
+    echo "current_epoch=$current_epoch"
+    echo "current_epoch_credits=$current_epoch_credits"
+    echo "previous_epoch_credits=$previous_epoch_credits"
+    echo "commission=$commission"
+    echo "vote_account_balance_in_lamports=$lamports"
+    echo "vote_account_balance_in_sol=$sol"
+
+}

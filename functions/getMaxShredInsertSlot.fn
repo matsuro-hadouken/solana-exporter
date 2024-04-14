@@ -1,0 +1,51 @@
+#!/bin/bash
+
+#!/bin/bash
+
+# This function queries a Solana node to retrieve the highest slot number for which a shred (part of a block) has been inserted.
+# The maximum shred insert slot is a crucial metric for understanding the current block processing status of a Solana node,
+# indicating the latest slot that has successfully processed data.
+
+# Arguments:
+#   $1 - RPC endpoint URL: The server address to send the request to. This should be the JSON RPC endpoint of a Solana node.
+
+# Response:
+# The function outputs the highest slot number that has had shreds inserted. This metric is essential for monitoring the operational
+# status and the timeliness of the node's engagement with the blockchain's consensus process.
+
+# Usage:
+# This function is important for blockchain operators and developers to ensure their nodes are actively processing and contributing to
+# the blockchain. It helps in diagnosing delays or lags in data processing.
+# Example usage:
+#   max_shred_insert_slot=$(get_max_shred_insert_slot "https://api.testnet.solana.com")
+#   echo "Maximum Shred Insert Slot: $max_shred_insert_slot"
+
+# Solana RPC Reference:
+# Detailed information about the 'getMaxShredInsertSlot' RPC call can be found in the Solana documentation:
+# https://solana.com/docs/rpc/http/getmaxshredinsertslot
+
+# Output:
+# The function returns the maximum shred insert slot as a single integer value. If there are any issues with the retrieval
+# or the JSON format of the response, these are managed and logged by 'json_validator', ensuring the data's integrity and correctness.
+
+# Function to retrieve and return the maximum shred insert slot from a Solana node
+function get_max_shred_insert_slot {
+
+    local rpc_endpoint="$1"
+
+    # Make the RPC call to get the maximum shred insert slot
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d '{
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getMaxShredInsertSlot"
+    }')
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Extract the maximum shred insert slot from the response
+    local max_shred_insert_slot=$(echo "$response" | jq -r '.result')
+
+    # Output the maximum shred insert slot
+    echo "$max_shred_insert_slot"
+}

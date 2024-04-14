@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# This function fetches the current epoch information from a Solana node and calculates the progress through the current epoch as a percentage.
+# Epoch progress is a crucial metric for understanding the timeline of staking and consensus in Solana's block production.
+
+# Arguments:
+#   $1 - RPC endpoint URL: The server address to send the request to. This should be the JSON RPC endpoint of a Solana node.
+
+# Response:
+# The function outputs the progress of the current epoch as a percentage, providing insight into how far through the current epoch the network is.
+
+# Usage:
+# This function is particularly useful in monitoring scripts or when assessing network activity and synchronization status.
+# Example usage:
+#   epoch_progress=$(get_epoch_progress "https://api.testnet.solana.com")
+#   echo "Epoch Progress: $epoch_progress%"
+
+# Solana RPC Reference:
+# Details about the 'getEpochInfo' RPC call can be found in the Solana documentation:
+# https://solana.com/docs/rpc/http/getepochinfo
+
+# Output:
+# The function prints the epoch progress as a percentage to two decimal places. It ensures accuracy and readability by calculating the
+# proportion of slots completed in the current epoch relative to the total slots. If there's an issue with the RPC call or the data extraction,
+# it will be indicated by the 'json_validator' which validates the JSON response for correctness.
+
+# Function to calculate and return the epoch progress as a percentage
+function get_epoch_progress {
+
+    local rpc_endpoint="$1"
+
+    # Make the RPC call and store the response
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d '{
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getEpochInfo"
+    }')
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Extract values from the response
+    local absoluteSlot=$(echo "$response" | jq -r '.result.absoluteSlot')
+    local slotIndex=$(echo "$response" | jq -r '.result.slotIndex')
+    local slotsInEpoch=$(echo "$response" | jq -r '.result.slotsInEpoch')
+
+    # Calculate the epoch progress percentage
+    local epochProgress=$(echo "scale=4; $slotIndex / $slotsInEpoch * 100" | bc)
+    epochProgress=$(printf "%.2f" "$epochProgress")
+
+    # Return the calculated epoch progress percentage
+    echo "$epochProgress"
+}

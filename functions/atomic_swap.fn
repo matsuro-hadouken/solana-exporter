@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Function to atomic swap all files from temp_files to prometheus_files
+function atomic_swap_prom_files {
+
+    local temp_files="${temp_files}"
+    local prometheus_files="${prometheus_files}"
+
+    # Check if temp_files directory exists
+    if [ -d "$temp_files" ]; then
+
+        # Loop through all files in temp_files directory
+        for file in "$temp_files"/*; do
+
+            # Extract file name
+            local filename=$(basename "$file")
+            # Perform atomic swap
+            mv "$file" "${prometheus_files}/${filename}"
+
+        done
+
+        log_message "Successfully performed atomic swap from $temp_files to $prometheus_files" "$log_file_path"
+
+    else
+
+        log_message "Error: $temp_files directory does not exist" "$log_file_path"
+
+    fi
+
+}

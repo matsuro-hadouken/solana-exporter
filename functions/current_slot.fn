@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# This function queries a Solana node to retrieve the current slot number, a key metric in Solana's consensus and block production.
+# A "slot" in Solana is a period in which a leader ingests transactions and produces a block.
+
+# Arguments:
+#   $1 - RPC endpoint URL: The server address to send the request to. This should be the JSON RPC endpoint of a Solana node.
+
+# Response:
+# The function outputs the current slot number as a simple integer. This is useful for monitoring the progress and health
+# of the Solana blockchain, particularly in understanding the rate at which slots are being processed.
+
+# Usage:
+# The function is designed to be used in scripts where monitoring or logging of the Solana blockchain's current slot is required.
+# Example usage:
+#   current_slot=$(get_current_slot "https://api.testnet.solana.com")
+#   echo "Current Slot: $current_slot"
+
+# Solana RPC Reference:
+# Details about the 'getSlot' RPC call can be found in the Solana documentation here:
+# https://solana.com/docs/rpc/http/getslot
+
+# Output:
+# The function prints the current slot number. If there's an error in fetching or parsing the slot information,
+# the function will output an error message, handled by 'json_validator' to ensure JSON format correctness.
+
+# Function to retrieve and return the current slot number from a Solana node
+function get_current_slot {
+
+    local rpc_endpoint="$1"
+
+    # Make the RPC call to get the current slot
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d '{
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getSlot"
+    }')
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Extract the slot number from the response
+    local slot_number=$(echo "$response" | jq -r '.result')
+
+    # Output the slot number
+    echo "$slot_number"
+
+}

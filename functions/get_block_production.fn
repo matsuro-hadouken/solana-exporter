@@ -1,0 +1,72 @@
+#!/bin/bash
+
+#!/bin/bash
+
+# This function retrieves and calculates detailed block production statistics for a specific validator from a Solana node.
+# It uses the 'getBlockProduction' RPC call to fetch the number of slots that have been assigned and processed by the validator,
+# which is essential for monitoring the validator's performance and participation in the consensus process.
+
+# Arguments:
+#   $1 - RPC endpoint URL: The server address to send the request to. This should be the JSON RPC endpoint of a Solana node.
+#   $2 - Validator identity (public key): The public key of the validator for which block production stats are being queried.
+
+# Response:
+# The function extracts and calculates the number of assigned slots, processed slots, skipped slots, and the percentage of slots skipped.
+# This data is crucial for assessing the efficiency and reliability of a validator in the Solana network.
+
+# Usage:
+# This function is particularly useful for Solana network administrators, validators, and analysts who need to track how effectively
+# a validator is participating in block production. It provides metrics that can help in decision-making processes regarding staking and delegation.
+# Example usage:
+#   block_production_stats=$(get_block_production "https://api.mainnet-beta.solana.com" "ValidatorPublicKey")
+#   echo $block_production_stats
+
+# Solana RPC Reference:
+# Details about the 'getBlockProduction' RPC call can be found in the Solana documentation:
+# https://solana.com/docs/rpc/http/getblockproduction
+
+# Output:
+# The function prints several key metrics about block production in a format that is easy to parse for further analysis or monitoring:
+# - assigned_leader_slots: Number of slots assigned to the validator
+# - processed_leader_slots: Number of slots where the validator successfully produced a block
+# - skipped_leader_slots: Number of slots assigned but not utilized for block production
+# - leader_slots_skip_percentage: Percentage of assigned slots that were skipped, calculated as (skipped/assigned) * 100
+
+# Additionally, robust JSON validation checks ensure the response is accurate, and any errors are logged appropriately.
+
+# Function to extract assigned and processed leader slots and calculate skips
+function get_block_production {
+
+    local rpc_endpoint="$1"
+    local validator_identity="$2"
+
+    # Make the RPC call
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d "{
+        \"jsonrpc\": \"2.0\",
+        \"id\": 1,
+        \"method\": \"getBlockProduction\",
+        \"params\": [{
+            \"identity\": \"$validator_identity\"
+        }]
+    }")
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Extract assigned and processed leader slots
+    assigned_leader_slots=$(echo "$response" | jq -r ".result.value.byIdentity.\"$validator_identity\"[0]")
+    processed_leader_slots=$(echo "$response" | jq -r ".result.value.byIdentity.\"$validator_identity\"[1]")
+
+    # Calculate skipped leader slots
+    skipped_leader_slots=$((assigned_leader_slots - processed_leader_slots))
+
+    # Calculate leader slots skip percentage
+    leader_slots_skip_percentage=$(echo "scale=2; 100 * $skipped_leader_slots / $assigned_leader_slots" | bc)
+
+    # Output in key=value format for compatibility with Prometheus file creation
+    echo "block_production_assigned_slots=$assigned_leader_slots"
+    echo "block_production_processed_slots=$processed_leader_slots"
+    echo "block_production_skipped_slots=$skipped_leader_slots"
+    echo "block_production_skip_rate_percentage=$leader_slots_skip_percentage"
+
+}

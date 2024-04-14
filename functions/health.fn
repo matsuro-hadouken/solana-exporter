@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#!/bin/bash
+
+# This function queries a Solana node to retrieve its health status. The 'getHealth' RPC call is used to determine if the node is
+# operating normally or if there are any issues affecting its performance. This is a critical metric for monitoring and maintaining
+# the reliability of Solana nodes in a network.
+
+# Arguments:
+#   $1 - RPC endpoint URL: The server address to send the request to. This should be the JSON RPC endpoint of a Solana node.
+
+# Response:
+# The function evaluates the health of the node based on the RPC response. A healthy node returns 'ok', which translates to a status
+# of '0' indicating no issues. Any other response indicates potential issues, translating to a status of '1'.
+
+# Usage:
+# This function is vital for automated monitoring systems or administrative scripts used to ensure that Solana nodes are functioning properly.
+# Example usage:
+#   node_health=$(getHealth "https://api.mainnet-beta.solana.com")
+#   echo "Node Health Status: $node_health (0=healthy, 1=unhealthy)"
+
+# Solana RPC Reference:
+# Detailed information about the 'getHealth' RPC call can be found in the Solana documentation:
+# https://solana.com/docs/rpc/http/gethealth
+
+# Output:
+# The function outputs '0' if the node is healthy ('ok' response) or '1' if there is any issue detected. This status is essential for
+# alert systems or operational dashboards monitoring the health of Solana nodes. The response's JSON format is validated by 'json_validator',
+# which also logs any errors encountered during the process to ensure data integrity.
+
+function getHealth {
+
+    local rpc_endpoint="$1"
+
+    # Make the RPC call
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d '{
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getHealth"
+    }')
+
+    # Extract the health status result
+    health_status=$(echo "$response" | jq -r '.result')
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Check the health status and return appropriately
+    if [ "$health_status" == "ok" ]; then
+        echo "0"
+    else
+        echo "1"
+    fi
+
+}

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+function check_dependency() {
+
+    # Ensure the log file exists; if not, create it
+    if [ ! -f "$log_file_path" ]; then
+        touch "$log_file_path" 2>/dev/null
+        if [ $? -ne 0 ]; then
+            echo "Error: Unable to write to log file path at '$log_file_path'. Check permissions." >&2
+            exit 1
+        fi
+    fi
+
+    # Ensure the log file exists; if not, create it
+    if [ ! -f "$rpc_responses_prom_file" ]; then
+        touch "$rpc_responses_prom_file" 2>/dev/null
+        if [ $? -ne 0 ]; then
+            echo "Error: Unable to write to log file path at '$rpc_responses_prom_file'. Check permissions." >&2
+            exit 1
+        fi
+    fi
+
+    # Ensure the Prometheus files directory exists
+    if [ ! -d "$prometheus_files" ]; then
+        mkdir -p "$prometheus_files"
+        if [ $? -ne 0 ]; then
+            echo "Error: Unable to create directory at '$prometheus_files'. Check permissions." >&2
+            exit 1
+        fi
+    fi
+
+    # Ensure the temporary files directory exists
+    if [ ! -d "$temp_files" ]; then
+        mkdir -p "$temp_files"
+        if [ $? -ne 0 ]; then
+            echo "Error: Unable to create temporary directory at '$temp_files'. Check permissions." >&2
+            exit 1
+        fi
+    fi
+
+}

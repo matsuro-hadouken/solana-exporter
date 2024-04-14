@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# This function queries a Solana node to determine the number of slots assigned to a specific validator for the current or upcoming epoch.
+# Understanding the number of slots assigned helps in analyzing the validator's participation and responsibilities in block production.
+
+# Arguments:
+#   $1 - RPC endpoint URL: The server address to send the request to. This should be the JSON RPC endpoint of a Solana node.
+#   $2 - Validator identity (public key): The public key of the validator for which the leader schedule is being queried.
+
+# Response:
+# The function outputs the number of slots assigned to the specified validator for the epoch. This metric is crucial for validators
+# to understand their duties and for stakeholders to assess validator performance and participation.
+
+# Usage:
+# This function is essential in monitoring and operational scripts where insights into a validator’s scheduled participation in consensus are needed.
+# Example usage:
+#   slots_assigned=$(get_assigned_slots "https://api.testnet.solana.com" "ValidatorPublicKey")
+#   echo "Slots assigned to Validator: $slots_assigned"
+
+# Solana RPC Reference:
+# Details about the 'getLeaderSchedule' RPC call can be found in the Solana documentation:
+# https://solana.com/docs/rpc/http/getleaderschedule
+
+# Output:
+# The function returns the count of slots assigned to the validator, aiding in operational and strategic decision-making for staking and network participation.
+# If an error occurs in fetching or parsing the slot information, it will be captured and logged by the 'json_validator' which validates the JSON format of the response.
+
+# Function to calculate the number of slots assigned to a validator in an epoch
+function get_assigned_slots {
+
+    local rpc_endpoint=$1
+    local validator_identity=$2
+
+    # Make the RPC call using specified parameters
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d "{
+        \"jsonrpc\": \"2.0\",
+        \"id\": 1,
+        \"method\": \"getLeaderSchedule\",
+        \"params\": [
+            null,
+            {
+                \"identity\": \"$validator_identity\"
+            }
+        ]
+    }")
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Extract the array of slots assigned to the validator and count them
+    slots_count=$(echo "$response" | jq -r ".result.\"$validator_identity\" | length")
+
+    echo "$slots_count"
+}

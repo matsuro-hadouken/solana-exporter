@@ -1,0 +1,52 @@
+#!/bin/bash
+
+#!/bin/bash
+
+# This function queries a Solana node to retrieve the highest slot number that the node has retransmitted.
+# The maximum retransmit slot is a critical measure for assessing the synchronization and performance issues of a Solana node,
+# especially in determining how far behind a node might be in processing the consensus algorithm.
+
+# Arguments:
+#   $1 - RPC endpoint URL: The server address to send the request to. This should be the JSON RPC endpoint of a Solana node.
+
+# Response:
+# The function outputs the highest slot number that has been retransmitted by the node. This is an important metric for monitoring
+# node health and alignment with the network's current state.
+
+# Usage:
+# This function is vital for node operators and network administrators to ensure their nodes are functioning correctly and are up-to-date
+# with the latest blocks. It is particularly useful in diagnostic and monitoring setups.
+# Example usage:
+#   max_retransmit_slot=$(get_max_retransmit_slot "https://api.testnet.solana.com")
+#   echo "Maximum Retransmit Slot: $max_retransmit_slot"
+
+# Solana RPC Reference:
+# Detailed information about the 'getMaxRetransmitSlot' RPC call can be found in the Solana documentation:
+# https://solana.com/docs/rpc/http/getmaxretransmitslot
+
+# Output:
+# The function returns the maximum retransmit slot as a single integer value. If the response is invalid or there are errors in retrieval,
+# these are logged by 'json_validator', which also checks the response's JSON format for correctness.
+
+# Function to retrieve and return the maximum retransmit slot from a Solana node
+function get_max_retransmit_slot {
+
+    local rpc_endpoint="$1"
+
+    # Make the RPC call to get the maximum retransmit slot
+    response=$(curl -s -X POST "$rpc_endpoint" -H "Content-Type: application/json" -d '{
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getMaxRetransmitSlot"
+    }')
+
+    # Validate JSON response
+    json_validator "$response"
+
+    # Extract the maximum retransmit slot from the response
+    local max_retransmit_slot=$(echo "$response" | jq -r '.result')
+
+    # Output the maximum retransmit slot
+    echo "$max_retransmit_slot"
+
+}

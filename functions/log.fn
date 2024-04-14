@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Function to log messages with a timestamp
+function log_message {
+    local message=$1
+    local log_file_path=$2
+    echo "$(date "+%Y-%m-%d %H:%M:%S") $message" >> "$log_file_path"
+}
