@@ -40,6 +40,8 @@ function update_prometheus_status {
     local prom_file="${rpc_responses_prom_file}"
     local temp_file="${prom_file}.tmp"
 
+    local metrics_prefix="${metrics_prefix}"
+
     # Ensure HELP and TYPE definitions are set in the temp file
     if ! grep -q "^# HELP function_status" "$prom_file"; then
         echo "# HELP function_status RPC functions execution statuses (0=success, 1=empty response, 3=error)" > "$temp_file"
@@ -52,13 +54,13 @@ function update_prometheus_status {
     awk -v fname="$function_name" -v stat="$status" '
         BEGIN { found=0 }
         /^function_status{function="'"fname"'"} / {
-            print "function_status{function=\"" fname "\"} " stat;
+            print "'${metrics_prefix}'_exporter_function_exit_status{function=\"" fname "\"} " stat;
             found=1;
             next;
         }
         /^# / { next }
         { print }
-        END { if (!found) print "function_status{function=\"" fname "\"} " stat; }
+        END { if (!found) print "'${metrics_prefix}'_exporter_function_exit_status{function=\"" fname "\"} " stat; }
     ' "$prom_file" >> "$temp_file"
 
     # Atomically move the temporary file to the original
