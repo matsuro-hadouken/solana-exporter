@@ -47,6 +47,9 @@ function get_block_production {
         }]
     }")
 
+    # Validate JSON response
+    json_validator "$response"
+
     # Extract assigned and processed leader slots; default to 0 if not present
     assigned_leader_slots=$(echo "$response" | jq -r ".result.value.byIdentity.\"$validator_identity\"[0] // 0")
     processed_leader_slots=$(echo "$response" | jq -r ".result.value.byIdentity.\"$validator_identity\"[1] // 0")

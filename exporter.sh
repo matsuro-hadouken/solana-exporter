@@ -3,7 +3,7 @@
 # Configuration Variables
 
 # RPC endpoint: Specify the URL of the node to be monitored.
-RPC='http://127.0.0.1:8899'
+RPC='127.0.0.1:8899'
 
 # VOTE_ACCOUNT: Address of the voting account.
 VOTE_ACCOUNT='TJxK9eH3Wq628YtwCgavBMP47VoZ8yx1r2U4fxYgMhqp'
@@ -88,13 +88,16 @@ scripts=(
 
 # shellcheck disable=SC1090
 for script in "${scripts[@]}"; do
+
     script_path="${functions_storage_path}/${script}.fn"
+
     if [[ -f "$script_path" ]]; then
         source "$script_path"
     else
         log_message "ERROR: Missing file ${script_path}" "$log_file_path"
         exit 1
     fi
+
 done
 
 check_dependency # check if all files and folders in place and we have access
@@ -104,13 +107,16 @@ log_message '==> Starting Solana metrics collection <==' "$log_file_path"
 # Grab timestamp for execution time calculation
 start_time=$(date +%s%N) # capture time in nanoseconds
 
-# Health status <================= metrics collection starts here
+# <================= metrics collection starts here
+
+# Health status
 health_status=$(getHealth "${RPC}")
 create_prom_file "validator_health" "Validator health status" "gauge" "${health_status}"
 
 # Account information
 account_info=$(get_account_info "$RPC" "$VOTE_ACCOUNT")
-metrics=( "$account_info" )
+# shellcheck disable=SC2206
+metrics=( $account_info )
 create_multiple_prom_files "${metrics[@]}"
 
 # Epoch progress
@@ -135,17 +141,20 @@ create_prom_file "max_shred_insert_slot" "Maximum shred insert slot number" "gau
 
 # Highest snapshot slot
 metrics_output=$(get_highest_snapshot_slot "$RPC")
-metrics_array=( "$metrics_output" )
+# shellcheck disable=SC2206
+metrics_array=( $metrics_output )
 create_multiple_prom_files "${metrics_array[@]}"
 
 # Block production metrics
 block_production_metrics=$(get_block_production "$RPC" "$VALIDATOR_IDENTITY")
-block_production_array=( "$block_production_metrics" )
+# shellcheck disable=SC2206
+block_production_array=( $block_production_metrics )
 create_multiple_prom_files "${block_production_array[@]}"
 
 # Version information
 version_info=$(getVersion "$RPC")
-version_array=( "$version_info" )
+# shellcheck disable=SC2206
+version_array=( $version_info )
 create_multiple_prom_files "${version_array[@]}"
 
 # Balances
